@@ -13,10 +13,10 @@ func main() {
 
 	mux.Handle("/api/heartbeat", WithLogging(heartbeatHandler()))
 
-	addr := "localhost:8000"
+	addr := "0.0.0.0:8000"
 	logrus.WithField("addr", addr).Info("starting server")
 
-	err := http.ListenAndServe("localhost:8000", mux)
+	err := http.ListenAndServe(addr, mux)
 
 	if err != nil {
 		logrus.WithField("event", "start server").Fatal(err)
