@@ -35,8 +35,6 @@ func heartbeatHandler() http.Handler {
 func WithLogging(h http.Handler) http.Handler {
 	logFn := func(w http.ResponseWriter, r *http.Request) {
 		start := time.Now()
-		uri := r.RequestURI
-		method := r.Method
 
 		responseData := &responseData{
 			status: 0,
@@ -53,8 +51,8 @@ func WithLogging(h http.Handler) http.Handler {
 		duration := time.Since(start)
 
 		logrus.WithFields(logrus.Fields{
-			"uri":      uri,
-			"method":   method,
+			"uri":      r.RequestURI,
+			"method":   r.Method,
 			"status":   responseData.status,
 			"duration": duration,
 			"size":     responseData.size,
