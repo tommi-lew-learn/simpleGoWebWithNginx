@@ -3,6 +3,7 @@ package main
 import (
 	"fmt"
 	"net/http"
+	"time"
 
 	"github.com/sirupsen/logrus"
 )
@@ -10,7 +11,7 @@ import (
 func main() {
 	mux := http.NewServeMux()
 
-	mux.HandleFunc("/api/heartbeat", heartbeat)
+	mux.Handle("/api/heartbeat", WithLogging(heartbeatHandler()))
 
 	addr := "localhost:8000"
 	logrus.WithField("addr", addr).Info("starting server")
@@ -24,4 +25,28 @@ func main() {
 
 func heartbeat(w http.ResponseWriter, r *http.Request) {
 	fmt.Fprint(w, "Pong")
+}
+
+func heartbeatHandler() http.Handler {
+	fn := heartbeat
+	return http.HandlerFunc(fn)
+}
+
+func WithLogging(h http.Handler) http.Handler {
+	logFn := func(w http.ResponseWriter, r *http.Request) {
+		start := time.Now()
+		uri := r.RequestURI
+		method := r.Method
+
+		h.ServeHTTP(w, r)
+
+		duration := time.Since(start)
+
+		logrus.WithFields(logrus.Fields{
+			"uri":      uri,
+			"method":   method,
+			"duration": duration,
+		}).Info()
+	}
+	return http.HandlerFunc(logFn)
 }
