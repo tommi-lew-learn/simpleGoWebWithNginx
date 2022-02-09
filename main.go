@@ -38,15 +38,52 @@ func WithLogging(h http.Handler) http.Handler {
 		uri := r.RequestURI
 		method := r.Method
 
-		h.ServeHTTP(w, r)
+		responseData := &responseData{
+			status: 0,
+			size:   0,
+		}
+
+		lrw := loggingResponseWriter{
+			ResponseWriter: w, // compose original http.ResponseWriter
+			responseData:   responseData,
+		}
+
+		h.ServeHTTP(&lrw, r)
 
 		duration := time.Since(start)
 
 		logrus.WithFields(logrus.Fields{
 			"uri":      uri,
 			"method":   method,
+			"status":   responseData.status,
 			"duration": duration,
+			"size":     responseData.size,
 		}).Info()
 	}
 	return http.HandlerFunc(logFn)
+}
+
+type (
+	// struct for holding response details
+	responseData struct {
+		status int
+		size   int
+	}
+
+	// our http.ResponseWriter implementation
+	loggingResponseWriter struct {
+		http.ResponseWriter // compose original http.ResponseWriter
+		responseData        *responseData
+	}
+)
+
+func (r *loggingResponseWriter) Write(b []byte) (int, error) {
+	size, err := r.ResponseWriter.Write(b) // write response using original http.ResponseWriter
+	r.responseData.size += size            // capture size
+	return size, err
+}
+
+func (r *loggingResponseWriter) WriteHeader(statusCode int) {
+	r.ResponseWriter.WriteHeader(statusCode) // write status code using original http.ResponseWriter
+	r.responseData.status = statusCode       // capture status code
 }
