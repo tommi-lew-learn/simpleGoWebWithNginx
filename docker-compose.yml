@@ -1,0 +1,16 @@
+version: '3.8'
+services:
+  web:
+    build:
+      context: ./web
+    ports:
+      - 80:80
+    restart: always
+    depends_on:
+      - app
+  app:
+    build:
+      context: ./app
+    ports:
+      - 8000:8000
+    restart: always
