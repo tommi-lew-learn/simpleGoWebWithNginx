@@ -1,8 +1,10 @@
 package main
 
 import (
+	"encoding/json"
 	"fmt"
 	"net/http"
+	"strings"
 	"time"
 
 	"github.com/sirupsen/logrus"
@@ -12,6 +14,7 @@ func main() {
 	mux := http.NewServeMux()
 
 	mux.Handle("/api/heartbeat", WithLogging(heartbeatHandler()))
+	mux.Handle("/api/time", WithLogging(timesHandler()))
 
 	addr := "0.0.0.0:8000"
 	logrus.WithField("addr", addr).Info("starting server")
@@ -30,6 +33,46 @@ func heartbeat(w http.ResponseWriter, r *http.Request) {
 func heartbeatHandler() http.Handler {
 	fn := heartbeat
 	return http.HandlerFunc(fn)
+}
+
+func timesHandler() http.Handler {
+	fn := times
+	return http.HandlerFunc(fn)
+}
+
+func times(w http.ResponseWriter, r *http.Request) {
+	tz := r.FormValue("tz")
+	multipleTz := tz
+	timezones := strings.Split(multipleTz, ",")
+
+	// If the tz parameter is not provided in the URL
+	if len(timezones) == 1 && timezones[0] == "" {
+		// replace empty string with "UTC
+		timezones[0] = "UTC"
+	}
+
+	var localTimes map[string]string = currentTimes(&timezones)
+
+	w.Header().Add("Content-Type", "application/json")
+
+	// TODO: Handle potential encoding issue
+	json.NewEncoder(w).Encode(localTimes)
+}
+
+func currentTimes(zones *[]string) map[string]string {
+	localTimesMap := make(map[string]string)
+
+	for _, zone := range *zones {
+		loc, err := time.LoadLocation(zone)
+
+		if err != nil {
+			localTimesMap[zone] = "invalid timezone"
+		} else {
+			localTimesMap[zone] = fmt.Sprintf("%s", time.Now().In(loc))
+		}
+	}
+
+	return localTimesMap
 }
 
 func WithLogging(h http.Handler) http.Handler {
