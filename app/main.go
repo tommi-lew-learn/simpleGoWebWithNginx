@@ -3,10 +3,13 @@ package main
 import (
 	"encoding/json"
 	"fmt"
+	"log"
 	"net/http"
+	"os"
 	"strings"
 	"time"
 
+	"github.com/joho/godotenv"
 	"github.com/sirupsen/logrus"
 )
 
@@ -54,6 +57,10 @@ func times(w http.ResponseWriter, r *http.Request) {
 	var localTimes map[string]string = currentTimes(&timezones)
 
 	w.Header().Add("Content-Type", "application/json")
+	w.Header().Add(
+		"Access-Control-Allow-Origin",
+		goDotEnvVariable("ACCESS_CONTROL_ALLOW_ORIGIN"),
+	)
 
 	// TODO: Handle potential encoding issue
 	json.NewEncoder(w).Encode(localTimes)
@@ -127,4 +134,14 @@ func (r *loggingResponseWriter) Write(b []byte) (int, error) {
 func (r *loggingResponseWriter) WriteHeader(statusCode int) {
 	r.ResponseWriter.WriteHeader(statusCode) // write status code using original http.ResponseWriter
 	r.responseData.status = statusCode       // capture status code
+}
+
+func goDotEnvVariable(key string) string {
+	err := godotenv.Load(".env")
+
+	if err != nil {
+		log.Fatalf("Error loading .env file")
+	}
+
+	return os.Getenv(key)
 }
